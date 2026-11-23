@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ethers } from 'ethers';
-import { contractAddress, contractABI } from '../web3Config';
+import { contractAddress, contractABI, contractDeploymentBlock } from '../web3Config';
+import { queryFilterInChunks } from '../web3Utils';
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
 import './DonorDashboard.css';
@@ -84,7 +85,7 @@ const DonorDashboard = () => {
         const donationTxMap = new Map();
         try {
             const donateFilter = contract.filters.DonationReceived(null, null, account);
-            const donateEvents = await contract.queryFilter(donateFilter);
+            const donateEvents = await queryFilterInChunks(contract, donateFilter, contractDeploymentBlock);
             donateEvents.forEach(event => {
                 donationTxMap.set(Number(event.args.donationId), event.transactionHash);
             });
@@ -95,7 +96,7 @@ const DonorDashboard = () => {
         try {
            const distFilter = contract.filters.FundsDistributed(); 
            if(distFilter) {
-               const distEvents = await contract.queryFilter(distFilter);
+               const distEvents = await queryFilterInChunks(contract, distFilter, contractDeploymentBlock);
                distEvents.forEach(event => {
                  // Store BOTH the Beneficiary Address AND the Transaction Hash
                  distDataMap.set(Number(event.args.donationId), {

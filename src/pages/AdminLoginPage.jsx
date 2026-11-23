@@ -22,13 +22,20 @@ function AdminLoginPage() {
     try {
       setError('');
       setLoading(true);
-      
+
       // 1. Securely log the user in using Firebase
       const authUser = await login(email, password);
-      
+
       // 2. Check their role in the database
-      const userRef = doc(db, 'users', authUser.user.uid);
-      const docSnap = await getDoc(userRef);
+      let docSnap;
+      try {
+        const userRef = doc(db, 'users', authUser.user.uid);
+        docSnap = await getDoc(userRef);
+      } catch (firestoreErr) {
+        console.error('Admin Firestore lookup failed:', firestoreErr);
+        setError('Firebase is offline or Firestore is not enabled. Please verify your project configuration.');
+        return;
+      }
 
       if (docSnap.exists() && docSnap.data().role === 'Admin') {
         // 3. Success: User is an admin, send to the admin dashboard
@@ -40,9 +47,10 @@ function AdminLoginPage() {
         // await logout(); 
       }
     } catch (err) {
-      setError('Failed to log in. Check your email and password.');
+      setError('Failed to log in. Check your email and password and confirm Firebase is configured correctly.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

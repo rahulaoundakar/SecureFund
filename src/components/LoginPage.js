@@ -22,32 +22,36 @@ function LoginPage() {
   const roleName = role.charAt(0).toUpperCase() + role.slice(1);
 
   const handleSubmit = async (e) => {
-   e.preventDefault();
-    console.log(`--- 1. Attempting login for role: ${role} ---`); 
+    e.preventDefault();
+    console.log(`--- 1. Attempting login for role: ${role} ---`);
 
     try {
       setError('');
       setLoading(true);
-      
+
       const authUser = await login(email, password);
-      console.log("--- 2. Firebase Auth login successful. ---"); 
-      
-      const userRef = doc(db, 'users', authUser.user.uid);
-      const docSnap = await getDoc(userRef);
+      console.log("--- 2. Firebase Auth login successful. ---");
+
+      let docSnap;
+      try {
+        const userRef = doc(db, 'users', authUser.user.uid);
+        docSnap = await getDoc(userRef);
+      } catch (firestoreErr) {
+        console.error("Firestore read failed during login:", firestoreErr);
+        setError('Firebase is offline or Firestore is not enabled. Please check your Firebase project setup and online connection.');
+        return;
+      }
 
       if (docSnap.exists()) {
         const userData = docSnap.data();
         const userRole = userData.role.toLowerCase();
         console.log(`--- 3. Found user data. Role is: ${userRole} ---`);
-        
-        // --- THIS IS THE UPDATED ROLE CHECK ---
-        
+
         // Check if the user's role matches the login page they are on
         if (userRole !== role) {
-          console.error("--- 4. ROLE MISMATCH! ---"); 
+          console.error("--- 4. ROLE MISMATCH! ---");
           setError(`You are trying to log in as a ${role}, but this is a ${userRole} account.`);
-          setLoading(false);
-          return; // Stop execution
+          return;
         }
 
         // Redirect to the correct dashboard based on their role
@@ -56,21 +60,20 @@ function LoginPage() {
         } else if (userRole === 'beneficiary') {
           navigate('/beneficiary-dashboard');
         } else if (userRole === 'pendingngo') {
-          navigate('/ngo-dashboard'); // Send to NGO dash to see "Pending"
+          navigate('/ngo-dashboard');
         } else {
           navigate('/donor-dashboard');
         }
-
       } else {
         console.error("--- 4. NO USER DATA FOUND IN FIRESTORE ---");
-        setError('User data not found.');
+        setError('Your account exists, but no user profile was found in Firestore. Please sign up again or create the user record in the users collection.');
       }
-
     } catch (err) {
       console.error("--- 4. CATCH BLOCK ERROR: ---", err);
-      setError('Failed to log in. Check your email and password.');
+      setError('Failed to log in. Check your email and password and confirm Firebase is configured correctly.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
  return (

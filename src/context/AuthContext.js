@@ -70,17 +70,27 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+
       if (user) {
-        // If user is logged in, fetch their Firestore data (role, name)
-        const userRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userRef);
-        if (docSnap.exists()) {
-          setUserData(docSnap.data());
-        } else {
-          // Handle case where auth user exists but no firestore doc
-          console.log("No user data found in Firestore!");
+        try {
+          // If user is logged in, fetch their Firestore data (role, name)
+          const userRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            setUserData(docSnap.data());
+          } else {
+            // Handle case where auth user exists but no firestore doc
+            console.log("No user data found in Firestore!");
+            setUserData(null);
+          }
+        } catch (err) {
+          console.warn("Could not load Firestore user data. Firestore may be offline or blocked:", err);
+          setUserData(null);
         }
+      } else {
+        setUserData(null);
       }
+
       setLoading(false);
     });
 

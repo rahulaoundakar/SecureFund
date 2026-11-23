@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ethers } from 'ethers';
-import { contractAddress, contractABI } from '../web3Config';
+import { contractAddress, contractABI, contractDeploymentBlock } from '../web3Config';
+import { queryFilterInChunks } from '../web3Utils';
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore'; 
 import './NGODashboard.css'; 
@@ -87,7 +88,7 @@ const NGODashboard = () => {
 
         // B. Load Donations via Events
         const donateFilter = contract.filters.DonationReceived();
-        const donateEvents = await contract.queryFilter(donateFilter);
+        const donateEvents = await queryFilterInChunks(contract, donateFilter, contractDeploymentBlock);
         const myCampaignIds = ngoCampaigns.map(c => c.id);
         
         let relevantDonations = [];
